@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -318,3 +319,14 @@ $('help').onclick=()=>{$('help-dialog').showModal();updateTimeMode()};$('help-cl
 function newDialog(){ $('seed-input').value='VOID-'+Math.floor(Date.now()/1000).toString(36).toUpperCase();$('new-dialog').showModal();updateTimeMode()}
 $('new-world').onclick=newDialog;$('new-cancel').onclick=()=>{$('new-dialog').close();updateTimeMode()};$('new-confirm').onclick=()=>{const seed=$('seed-input').value.trim()||'UNIVERSE';branch=0;speed=1;startGame(false,seed)};$('end-review').onclick=()=>{$('end-dialog').close();updateTimeMode()};$('end-restart').onclick=()=>{$('end-dialog').close();newDialog()};
 for(const canvas of[renderer.canvas,renderer.fallback])canvas.addEventListener('pointerdown',e=>{if(!running||e.button!==0)return;const p=renderer.screenToWorld(e.clientX,e.clientY);let found=null,d=22/renderer.camera.scale;for(const a of game.agents){const dd=dist(a,p);if(dd<d){d=dd;found=a}}if(found){selected=found.id;notify(['Glass collector','Ember raider','Violet scavenger'][found.type]+' · '+found.state)}else{selected=null;$('inspect').style.display='none';game.beacon=Math.hypot(p.x,p.y)>670?null:p;if(game.beacon)notify('Priority beacon placed');else notify('Priority beacon cleared')}updateUI()});
+document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea')||document.querySelector('dialog[open]'))return;if(e.code==='Space'&&!e.repeat){e.preventDefault();usePulse()}else if(e.key.toLowerCase()==='p'&&!e.repeat)togglePause();else if(e.key.toLowerCase()==='e'&&!e.repeat){setPanel(true);setTab('evolve')}else if(e.key==='Tab'&&e.target===document.body){e.preventDefault();setPanel(!panelOpen)}else if(e.key==='Escape'){selected=null;$('inspect').style.display='none';if(panelOpen)setPanel(false)}});
+window.addEventListener('resize',()=>renderer.resize());document.addEventListener('visibilitychange',()=>{last=0;accum=0;if(document.hidden)saveGame()});window.addEventListener('pagehide',saveGame);
+function animate(now){requestAnimationFrame(animate);if(document.hidden){last=0;return}const realDt=last?Math.min(.1,(now-last)/1000):0;last=now;const modal=!!document.querySelector('dialog[open]');const multiplier=running&&!paused&&!modal&&!game.ended?(panelOpen&&tab==='evolve'&&$('slow-menu').checked?.15:speed):0;const dt=realDt*(game.surge?Math.min(multiplier,.65):multiplier);visualTime+=running?dt:realDt*.35;accum+=dt;let steps=0;while(accum>=1/60&&steps<24){tick(game,1/60);accum-=1/60;steps++}if(steps===24)accum=0;
+ renderer.render(game,visualTime,dt,null===selected?-1:selected);uiTimer+=realDt;saveTimer+=realDt;frameCount++;fpsElapsed+=realDt;if(fpsElapsed>=1){$('fps').textContent=Math.round(frameCount/fpsElapsed)+' FPS';frameCount=0;fpsElapsed=0}if(uiTimer>.3){uiTimer=0;updateUI();$('renderer').textContent=renderer.mode.toUpperCase();if(soundOn&&game.bullets.length>lastShot&&running&&!paused)tone(280+game.bullets.length*3);lastShot=game.bullets.length}if(saveTimer>8){saveTimer=0;saveGame()}}
+document.querySelector('[download]').href=location.href.split('#')[0];
+saved=readSave();if(saved){$('resume').hidden=false;$('resume').textContent='Resume · '+clock(saved.game.time)+' survived';$('start').textContent='Begin new experiment →'}setPanel(panelOpen);renderTree();renderOffers();updateUI();renderer.init().then(ok=>{if(ok)$('renderer-note').textContent='WebGPU active: instanced geometry and GPU flow particles. Ecological behavior and inherited neural controllers run in JavaScript.';$('renderer').textContent=renderer.mode.toUpperCase()});requestAnimationFrame(animate);
+// Small read-only diagnostics for inspecting a running experiment from developer tools.
+window.Bastion={snapshot:()=>JSON.parse(JSON.stringify(game)),renderer:()=>renderer.mode,version:'0.2.0'};
+</script>
+</body>
+</html>
